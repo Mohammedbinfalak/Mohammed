@@ -1,12 +1,11 @@
-import os
-import sys
-os.environ["JOBLIB_MULTIPROCESSING"] = "0"
-
 import streamlit as st
 import pandas as pd
 import numpy as np
-import joblib
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
 import plotly.graph_objects as go
+import os
 
 st.set_page_config(page_title="Heart Disease Prediction", layout="wide")
 
@@ -32,16 +31,19 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# ── Train model directly here ──────────────────
 @st.cache_resource
 def load_model():
-    try:
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        model_data = joblib.load(os.path.join(base_path, "heart_disease_model.pkl"))
-        scaler     = joblib.load(os.path.join(base_path, "heart_scaler.pkl"))
-        return model_data["model"], model_data["feature_names"], scaler
-    except FileNotFoundError as e:
-        st.error(f"Model files not found: {e}")
-        return None, None, None
+    df = pd.read_csv("heart_data.csv")
+    X = df.drop("target", axis=1)
+    y = df["target"]
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_scaled, y, test_size=0.2, random_state=42)
+    model = LogisticRegression()
+    model.fit(X_train, y_train)
+    return model, list(X.columns), scaler
 
 model, feature_names, scaler = load_model()
 
@@ -128,7 +130,7 @@ if model is not None:
         st.plotly_chart(fig, use_container_width=True)
 
         if prediction == 1:
-            st.error("**High Risk Detected:** Consult a cardiologist immediately. Maintain a heart-healthy lifestyle with regular exercise, balanced diet, and stress management.")
+            st.error("**High Risk Detected:** Consult a cardiologist immediately.")
         else:
             st.success("**Low Risk:** Continue healthy habits and regular check-ups.")
 
@@ -155,6 +157,3 @@ if model is not None:
         st.markdown("---")
         st.caption("This is for educational purposes only")
         st.caption("Not a substitute for professional medical advice")
-
-else:
-    st.error("Model not found. Run the notebook to generate model files.")
