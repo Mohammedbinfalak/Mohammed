@@ -1,4 +1,7 @@
 import os
+import sys
+os.environ["JOBLIB_MULTIPROCESSING"] = "0"
+
 import streamlit as st
 import pandas as pd
 import numpy as np
